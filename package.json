@@ -1,0 +1,10 @@
+{
+  "name": "faretrip-flight-first-itinerary",
+  "version": "1.0.0",
+  "private": true,
+  "description": "항공권 일정에 맞춘 여행 플래너 - GitHub & Vercel",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": { "node": ">=20" }
+}

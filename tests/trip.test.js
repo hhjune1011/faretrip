@@ -1,0 +1,12 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const trip=require('../lib/trip.js');
+const api=require('../api/flights.js');
+const flight={origin:'ICN',destination:'NRT',outboundDeparture:'2027-01-01T09:00',outboundArrival:'2027-01-01T11:30',returnDeparture:'2027-01-04T18:00',returnArrival:'2027-01-04T20:30',source:'manual'};
+test('date range includes both endpoints',()=>assert.deepEqual(trip.dateRange('2027-01-01','2027-01-03'),['2027-01-01','2027-01-02','2027-01-03']));
+test('invalid or too-long trips are rejected',()=>{assert.equal(trip.dateRange('2027-01-01','2027-02-01'),null);assert.match(trip.validateFlight({...flight,returnDeparture:'2026-12-30T10:00'}),/여행 날짜/)});
+test('correct day boundaries',()=>{const p=trip.buildPlan(flight,{pace:'normal',style:'balanced'});assert.equal(p.days.length,4);assert.equal(p.days[0].items[0].title,'목적지 도착');assert.equal(p.days.at(-1).items.at(-1).title,'귀국편 출발');});
+test('departure airport buffer',()=>{const p=trip.buildPlan(flight,{pace:'full',style:'food'});const d=p.days.at(-1);const l=d.items.find(x=>x.title==='공항 도착 목표 시각');assert.equal(l.time,'15:00');for(const x of d.items)if(x.kind!=='travel')assert.ok(trip.minutes('2027-01-04T'+x.time)<900)});
+test('late-night arrival generates no late attraction',()=>{const f={...flight,outboundArrival:'2027-01-01T23:10'};const p=trip.buildPlan(f,{pace:'full',style:'shopping'});assert.equal(p.days[0].items.some(x=>x.kind==='shopping'||x.kind==='culture'),false)});
+test('unsupported airport is rejected',()=>assert.match(trip.validateFlight({...flight,destination:'LAX'}),/지원하는/));
+test('flight response is sanitized into simple fields',()=>{const o=api._tidyOffer({id:'1',price:{grandTotal:'219000',currency:'KRW'},itineraries:[{segments:[{departure:{iataCode:'ICN',at:'2027-01-01T09:00'},arrival:{iataCode:'NRT',at:'2027-01-01T11:00'},carrierCode:'AA'}]},{segments:[{departure:{iataCode:'NRT',at:'2027-01-04T18:00'},arrival:{iataCode:'ICN',at:'2027-01-04T21:00'}}]}]}, {'AA':'Example Air'});assert.equal(o.destination,'NRT');assert.equal(o.airline,'Example Air');assert.equal(o.price,219000)});
